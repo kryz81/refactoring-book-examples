@@ -1,0 +1,17 @@
+{
+  "name": "refactoring-book-examples",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "scripts": {
+    "watch": "tsc-watch",
+    "format:write": "prettier --write \"src/**/*.{ts,js,json}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,js,json}\""
+  },
+  "devDependencies": {
+    "@types/node": "13.1.6",
+    "prettier": "1.19.1",
+    "tsc-watch": "4.0.0",
+    "typescript": "3.7.4"
+  }
+}
