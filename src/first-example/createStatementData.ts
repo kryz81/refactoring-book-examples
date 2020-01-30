@@ -5,30 +5,6 @@ export default function createStatementData(invoice: Invoice, plays: Plays) {
     return plays[performance.playID];
   }
 
-  function amountFor(play: Play, performance: Performance): number {
-    let result = 0;
-
-    switch (play.type) {
-      case 'tragedy':
-        result = 40000;
-        if (performance.audience > 30) {
-          result += 1000 * (performance.audience - 30);
-        }
-        break;
-      case 'comedy':
-        result = 30000;
-        if (performance.audience > 20) {
-          result += 10000 + 500 * (performance.audience - 20);
-        }
-        result += 300 * performance.audience;
-        break;
-      default:
-        throw new Error(`Unknown type: ${play.type}`);
-    }
-
-    return result;
-  }
-
   function volumeCreditsFor(performance: EnrichedPerformance): number {
     let result = 0;
 
@@ -59,17 +35,73 @@ export default function createStatementData(invoice: Invoice, plays: Plays) {
     return result;
   }
 
+  class PerformanceCalculator {
+    performance: Performance;
+    play: Play;
+
+    constructor(performance: Performance, play: Play) {
+      this.performance = performance;
+      this.play = play;
+    }
+
+    getAmount() {
+      throw new Error('Use subclass');
+    }
+
+    getVolumeCredits(): number {
+      return Math.max(this.performance.audience - 30, 0);
+    }
+  }
+
+  class TragedyCalculator extends PerformanceCalculator {
+    getAmount() {
+      let result = 40000;
+      if (this.performance.audience > 30) {
+        result += 1000 * (this.performance.audience - 30);
+      }
+
+      return result;
+    }
+  }
+
+  class ComedyCalculator extends PerformanceCalculator {
+    getAmount(): number {
+      let result = 30000;
+      if (this.performance.audience > 20) {
+        result += 10000 + 500 * (this.performance.audience - 20);
+      }
+      result += 300 * this.performance.audience;
+
+      return result;
+    }
+
+    getVolumeCredits(): number {
+      return super.getVolumeCredits() + Math.floor(this.performance.audience / 5);
+    }
+  }
+
+  function createPerformanceCalculator(performance: Performance, play: Play) {
+    switch (play.type) {
+      case 'tragedy':
+        return new TragedyCalculator(performance, play);
+      case 'comedy':
+        return new ComedyCalculator(performance, play);
+      default:
+        throw new Error(`Unknown type: ${play.type}`);
+    }
+  }
+
   function enrichPerformance(performance: Performance): EnrichedPerformance {
-    const result = {
+    const calculator = createPerformanceCalculator(performance, playFor(performance));
+
+    new PerformanceCalculator(performance, playFor(performance));
+
+    return {
       ...performance,
-      play: playFor(performance),
-      amount: amountFor(playFor(performance), performance),
-      volumeCredits: 0,
+      play: calculator.play,
+      amount: calculator.getAmount(),
+      volumeCredits: calculator.getVolumeCredits(),
     };
-
-    result.volumeCredits = volumeCreditsFor(result);
-
-    return result;
   }
 
   const statementData = {
